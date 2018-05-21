@@ -1,0 +1,6 @@
+dataset,patids,protseg,field_to_mdc,visno,other_key_fields
+dtx,"'001','002','003'",A,DTX_SEQ_NUM,1,DTX_SEQ_NUM
+enroll,"'001','002','003'",,STARTDT,,
+p67,"'001','002','003'",P,STARTDT,,
+lab,"'001','002','003'",A,STARTDT,S1,
+pbc,"'001','002','003'",A,STARTDT,S1,
