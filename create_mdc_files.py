@@ -2,17 +2,20 @@
 def create_mdc_sas_file(mdc_info: dict, mdc_file_path: str):
 
     patids = mdc_info['patids']
-    patid_string = '"PATID in ("{}")'.format(",".join(patids))
+    patid_string = 'PATID in ({})'.format(",".join(patids))
     protseg = mdc_info['protseg']
+    keep_data = ['DATASET', 'SITE', 'PROT', 'PATID', 'PROJID','VARIABLE_NAME', 'OLD_VALUE']
     if protseg is None:
         protseg_string = ""
     else:
         protseg_string = 'AND PROTSEG = "{}"'.format(protseg)
+        keep_data.append('PROTSEG')
     visno = mdc_info['visno']
     if visno is None:
         visno_string = ""
     else:
-        visno_string = 'AND VISNO in = "{}"'.format(visno)
+        visno_string = 'AND VISNO = "{}"'.format(visno)
+        keep_data.append('VISNO')
     temp_other_key_fields = mdc_info['other_key_fields']
     if temp_other_key_fields is None:
         temp_other_key_fields = [""]
@@ -20,10 +23,13 @@ def create_mdc_sas_file(mdc_info: dict, mdc_file_path: str):
     other_key_fields_template = 'AND {key_field} = "{key_field}"'
     for key_field in temp_other_key_fields:
         other_key_fields.append(other_key_fields_template.format(**{'key_field': key_field}))
+        keep_data.append(key_field)
     other_key_field_string = " ".join(other_key_fields)
     filter_data = [patid_string, protseg_string, visno_string, other_key_field_string]
     filter_string = " ".join(filter_data)
     mdc_info['filter_string'] = filter_string
+    keep_string = " ".join(keep_data)
+    mdc_info['keep_string'] = keep_string
 
     with open(mdc_file_path, 'w', newline="") as mdc_outfile:
         template = """
@@ -40,25 +46,25 @@ data {dataset};
 	DATASET = "{dataset}";
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
-	keep DATASET SITE PROT PATID PROJID  PROTSEG VISNO OTHR_KEY_FLD VARIABLE_NAME OLD_VALUE;
+	keep {keep_string};
 run;
 
 data {dataset}_an;
 	set andata.{dataset}_an;
 	if {filter_string};
-	DATASET = "{dataset}";
+	DATASET = "{dataset}_an";
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
-	keep DATASET SITE PROT PATID PROJID  PROTSEG VISNO OTHR_KEY_FLD VARIABLE_NAME OLD_VALUE;
+	keep {keep_string};
 run;
 
 data {dataset}_pm;
 	set pmdata.{dataset}_pm;
 	if {filter_string};
-	DATASET = "{dataset}";
+	DATASET = "{dataset}_pm";
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
-	keep DATASET SITE PROT PATID PROJID  PROTSEG VISNO OTHR_KEY_FLD VARIABLE_NAME OLD_VALUE;
+	keep {keep_string};
 run;
 
 proc sort {dataset} by DATASET SITE PROT PATID;run;
@@ -86,7 +92,7 @@ def main():
     mdc_path = 'MDC_Path'
     mdc_file_path = 'MDC_out.sas'
     dataset = 'DTX'
-    patids = ['0001', '0002', '0003']
+    patids = ["'0001'", "'0002'", "'0003'"]
     protseg = 'A'
     visno = '00I'
     other_key_fields = ['other_key_1', 'other_key_2']

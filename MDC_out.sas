@@ -8,29 +8,29 @@ LIBNAME pmdata "PM_Data_Path";
 
 data DTX;
 	set ndcdata.DTX;
-	if "PATID in ("0001,0002,0003") AND PROTSEG = "A" AND VISNO in = "00I" AND other_key_1 = "other_key_1" AND other_key_2 = "other_key_2";
+	if PATID in ('0001','0002','0003') AND PROTSEG = "A" AND VISNO = "00I" AND other_key_1 = "other_key_1" AND other_key_2 = "other_key_2";
 	DATASET = "DTX";
 	VARIABLE_NAME = "DTX_SEQ_NUM";
 	OLD_VALUE = DTX_SEQ_NUM;
-	keep DATASET SITE PROT PATID PROJID  PROTSEG VISNO OTHR_KEY_FLD VARIABLE_NAME OLD_VALUE;
+	keep DATASET SITE PROT PATID PROJID VARIABLE_NAME OLD_VALUE PROTSEG VISNO other_key_1 other_key_2;
 run;
 
 data DTX_an;
 	set andata.DTX_an;
-	if "PATID in ("0001,0002,0003") AND PROTSEG = "A" AND VISNO in = "00I" AND other_key_1 = "other_key_1" AND other_key_2 = "other_key_2";
-	DATASET = "DTX";
+	if PATID in ('0001','0002','0003') AND PROTSEG = "A" AND VISNO = "00I" AND other_key_1 = "other_key_1" AND other_key_2 = "other_key_2";
+	DATASET = "DTX_an";
 	VARIABLE_NAME = "DTX_SEQ_NUM";
 	OLD_VALUE = DTX_SEQ_NUM;
-	keep DATASET SITE PROT PATID PROJID  PROTSEG VISNO OTHR_KEY_FLD VARIABLE_NAME OLD_VALUE;
+	keep DATASET SITE PROT PATID PROJID VARIABLE_NAME OLD_VALUE PROTSEG VISNO other_key_1 other_key_2;
 run;
 
 data DTX_pm;
 	set pmdata.DTX_pm;
-	if "PATID in ("0001,0002,0003") AND PROTSEG = "A" AND VISNO in = "00I" AND other_key_1 = "other_key_1" AND other_key_2 = "other_key_2";
-	DATASET = "DTX";
+	if PATID in ('0001','0002','0003') AND PROTSEG = "A" AND VISNO = "00I" AND other_key_1 = "other_key_1" AND other_key_2 = "other_key_2";
+	DATASET = "DTX_pm";
 	VARIABLE_NAME = "DTX_SEQ_NUM";
 	OLD_VALUE = DTX_SEQ_NUM;
-	keep DATASET SITE PROT PATID PROJID  PROTSEG VISNO OTHR_KEY_FLD VARIABLE_NAME OLD_VALUE;
+	keep DATASET SITE PROT PATID PROJID VARIABLE_NAME OLD_VALUE PROTSEG VISNO other_key_1 other_key_2;
 run;
 
 proc sort DTX by DATASET SITE PROT PATID;run;
