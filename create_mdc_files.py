@@ -5,7 +5,7 @@ import subprocess
 
 def create_mdc_sas_file(mdc_info: dict, mdc_file_path: str):
     filter_data = []
-    keep_data = ['DATASET', 'SITE', 'PROTOCOL', 'PATID', 'PROJID', 'VARIABLE_NAME', 'OLD_VALUE']
+    keep_data = ['DATASET', 'SITE', 'PROTOCOL', 'PATID', 'PROJID', 'OTHER_KEY_FIELDS', 'VARIABLE_NAME', 'OLD_VALUE']
 
     field_to_mdc = mdc_info['field_to_mdc'].upper()
     if field_to_mdc not in ['ALL', 'DELETE']:
@@ -35,6 +35,9 @@ def create_mdc_sas_file(mdc_info: dict, mdc_file_path: str):
             # will s how all values for other key field and user can remove those not needed
             # filter_data.append(other_key_fields_template.format(**{'key_field': key_field}))
             keep_data.append(key_field)
+            mdc_info['other_key_fields'] = ','.join(temp_other_key_fields)
+    else:
+        mdc_info['other_key_fields'] = "NA"
             # TODO: Create a new variable to hold the other key field data in the keep
 
     filter_string = " ".join(filter_data)
@@ -52,35 +55,38 @@ LIBNAME andata "{an_path}";
 LIBNAME pmdata "{pm_path}";
 
 data {dataset};
-	length PROTOCOL $4. DATASET $6.;
+	length PROTOCOL $4. DATASET $6.{key_fields_length};
 	set ndcdata.{dataset};
 	if {filter_string};
 	DATASET = "{dataset}";
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
 	PROTOCOL = substr(PROT,1,4);
+	OTHER_KEY_FIELDS = "{other_key_fields}";
 	keep {keep_string};
 run;
 
 data {dataset}_an;
-	length PROTOCOL $4. DATASET $6.;
-	set andata.{dataset}_an;
+	length PROTOCOL $4. DATASET $6.{key_fields_length};
+	set ndcdata.{dataset}_an;
 	if {filter_string};
 	DATASET = "{dataset}_an";
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
 	PROTOCOL = substr(PROT,1,4);
+	OTHER_KEY_FIELDS = "{other_key_fields}
 	keep {keep_string};
 run;
 
 data {dataset}_pm;
-	length PROTOCOL $4. DATASET $6.;
-	set pmdata.{dataset}_pm;
+	length PROTOCOL $4. DATASET $6.{key_fields_length};
+	set ndcdata.{dataset}_pm;
 	if {filter_string};
 	DATASET = "{dataset}_pm";
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
 	PROTOCOL = substr(PROT,1,4);
+	OTHER_KEY_FIELDS = "{other_key_fields}
 	keep {keep_string};
 run;
 
@@ -154,7 +160,8 @@ def create_mdc_from_input():
 
 
 def main():
-    mdc_file_path = create_mdc_from_input()
+    # mdc_file_path = create_mdc_from_input()
+    mdc_file_path = 'mdc.csv'
     create_mdc_from_file(mdc_file_path)
     # create_single_mdc(r'G:\NIDADSC\spitts\MDCs\visno_00I')
 
@@ -171,7 +178,9 @@ def create_mdc_from_file(mdc_file):
             patids = row['patids'].split(",")
             protseg = row['protseg']
             visno = row['visno']
-            other_key_fields = row['other_key_fields'].split(",")
+            other_key_fields = row['other_key_fields']
+            key_fields_lenth = ' OTHER_KEY_FIELDS ${}.'.format(len(other_key_fields))
+            other_key_fields = other_key_fields.split(",")
             field_to_mdc = row['field_to_mdc']
             mdc_file_path = 'Create_{}_MDC.sas'.format(dataset)
 
@@ -185,6 +194,7 @@ def create_mdc_from_file(mdc_file):
             mdc_info['protseg'] = protseg
             mdc_info['visno'] = visno
             mdc_info['other_key_fields'] = other_key_fields
+            mdc_info['key_fields_length'] = key_fields_lenth
             mdc_info['field_to_mdc'] = field_to_mdc
 
             return create_mdc_sas_file(mdc_info, mdc_file_path)
