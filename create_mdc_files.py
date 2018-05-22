@@ -9,10 +9,7 @@ def create_mdc_from_input():
     to populate the csv including where to save the data.
     :return: pathway to the created csv
     """
-    while True:
-        mdc_csv_name = input('What do you want to call the mdc file? ')
-        if mdc_csv_name is not "":
-            break
+    mdc_csv_name = 'create_mdc.csv'
     while True:
         dir_to_save_mdc_file = input('Where do you want to save the file? ')
         if dir_to_save_mdc_file is not "" and os.path.isdir(dir_to_save_mdc_file):
@@ -21,16 +18,22 @@ def create_mdc_from_input():
     # Create the create_mdc_.csv file at the given directory
     with open(mdc_file_path, 'w', newline="") as csv_outfile:
         # Headers for the create_mdc.csv teamplate
-        field_names = ['dataset', 'patids', 'protseg', 'field_to_mdc', 'visno', 'other_key_fields']
+        field_names = ['dataset', 'patids', 'protocols', 'protseg', 'field_to_mdc', 'visno', 'other_key_fields']
         csv_writer = csv.writer(csv_outfile)
         csv_writer.writerow(field_names)
         datasets = input('What data sets to include(comma separated)? ').split(",")
-        patids = input('What patids to include(comma separated)? (Leave empty to search for all patids ')
+        patids = input('What patids to include(comma separated)? (Leave empty to search for all patids) ')
         if patids is not '':
             # Wrap them in "" because they are characters
             patids = ",".join(['"{}"'.format(patid)
                                for patid in patids.split(",")
                                ])
+        protocols = input('What protocols to include(comma separated)? (Leave empty if searching by PATID) ')
+        if protocols is not '':
+            # Wrap them in "" because they are characters
+            protocols = ",".join(['"{}"'.format(protocol)
+                                  for protocol in protocols.split(",")
+                                  ])
         protseg = input('What protseg to include? (Leave empty for none) ')
         visno = input('What VISNO to include? (Leave empty for none ')
         other_key_fields = input('What other key fields to include(comma separated)? (Leave empty if N/A)')
@@ -40,10 +43,10 @@ def create_mdc_from_input():
                 break
         # Create a row in the create_mdc file for each data set to search
         for dataset in datasets:
-            row = [dataset, patids, protseg, field_to_mdc, visno, other_key_fields]
+            row = [dataset, patids, protocols, protseg, field_to_mdc, visno, other_key_fields]
             csv_writer.writerow(row)
         print("Wrote MDC file to {}".format(mdc_file_path))
-    return mdc_file_path
+    return other_key_fields, mdc_file_path
 
 
 def create_sas_files_from_create_mdc_csv(create_mdc_csv_file):
@@ -63,9 +66,11 @@ def create_sas_files_from_create_mdc_csv(create_mdc_csv_file):
         mdc_folder_path = os.path.dirname(create_mdc_csv_file)
 
         # Get data from create_mdc.csv to create the sas file
+        # TODO: Check for valide headers in the csv file
         for row in create_mdc_csv_reader:
             dataset = row['dataset']
             patids = row['patids'].split(",")
+            protocols = row['protocols'].split(",")
             protseg = row['protseg']
             visno = row['visno']
             other_key_fields = row['other_key_fields']
@@ -84,6 +89,7 @@ def create_sas_files_from_create_mdc_csv(create_mdc_csv_file):
             mdc_info['mdc_path'] = mdc_folder_path
             mdc_info['dataset'] = dataset
             mdc_info['patids'] = patids
+            mdc_info['protocols'] = protocols
             mdc_info['protseg'] = protseg
             mdc_info['visno'] = visno
             mdc_info['other_key_fields'] = other_key_fields
@@ -120,6 +126,18 @@ def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
     if patids != ['']:
         patid_string = 'PATID in ({})'.format(",".join(patids))
         filter_data.append(patid_string)  # Add to filter conditions
+    else:
+        patid_string = 'PATID'
+        filter_data.append(patid_string)
+
+
+    # PROTOCOLs to search sas tables for. If we do not need to search
+    # by Protocol this will not be added to the filter conditions
+    # PROT will always be included in the keep statement
+    protocols = mdc_info['protocols']
+    if protocols != ['']:
+        protocol_string = ' AND PROT in ({})'.format(",".join(protocols))
+        filter_data.append(protocol_string)  # Add to filter conditions
 
     # PROTSEG to search by. If the table has no PROTSEG key
     # This will not be added to the filter string
@@ -127,7 +145,7 @@ def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
     if protseg != "":
         protseg_string = 'AND PROTSEG = "{}"'.format(protseg)
         filter_data.append(protseg_string)  # Add to filter conditions
-        keep_data.append('PROTSEG')  # Add to list of variables to keep
+    keep_data.append('PROTSEG')  # Always keep protseg for when searching without PATID
 
     # VISNO to search by. If the table has no VISNO key
     # This will not be added to the filter string
@@ -135,7 +153,7 @@ def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
     if visno != "":
         visno_string = 'AND VISNO = "{}"'.format(visno)
         filter_data.append(visno_string)  # Add to filter conditions
-        keep_data.append('VISNO')  # Add to list of variables to keep
+    keep_data.append('VISNO')  # Alwas keep VISNO
     # OTHER_KEY_FIELDS to search by. If the table has no other
     # key fields this will not be added to the filter string.
     # each key field will be kept in the table output
@@ -172,6 +190,7 @@ data {dataset};
 	DATASET = "{dataset}";
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
+	RENAME {field_to_mdc} = OLD_VALUE;
 	PROTOCOL = substr(PROT,1,4);
 	OTHER_KEY_FIELDS = "{other_key_fields}";
 	keep {keep_string};
@@ -184,6 +203,7 @@ data {dataset}_an;
 	DATASET = "{dataset}_an";
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
+	RENAME {field_to_mdc} = OLD_VALUE;
 	PROTOCOL = substr(PROT,1,4);
 	OTHER_KEY_FIELDS = "{other_key_fields}";
 	keep {keep_string};
@@ -196,6 +216,7 @@ data {dataset}_pm;
 	DATASET = "{dataset}_pm";
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
+	RENAME {field_to_mdc} = OLD_VALUE;
 	PROTOCOL = substr(PROT,1,4);
 	OTHER_KEY_FIELDS = "{other_key_fields}";
 	keep {keep_string};
@@ -229,11 +250,12 @@ def run_mdc(mdc_sas_file):
     subprocess.call([r'S:\SAS 9.4\x86\SASFoundation\9.4\sas.exe', mdc_sas_file])
 
 
-def create_single_mdc(mdc_file_folder):
+def create_single_mdc(mdc_file_folder, other_key_fields=None):
     """
     Creates a single csv file out of the multiple csv files created by the program so that
     all data found for each table is in one csv.
     :param mdc_file_folder: folder that contains the csvs
+    :param other_key_fields: other key fields to include
     :return: No return
     """
     # Get the list of files from the folder that are the mdc csvs
@@ -246,9 +268,11 @@ def create_single_mdc(mdc_file_folder):
     with open(os.path.join(mdc_file_folder, '{}_mdc.csv'.format(mdc_file_folder.split("\\")[-1])), 'w', newline="") as \
             mdc_outfile:
         # Headers for the MDC template
-        headers = ['PROTOCOL', 'DATASET', 'SITE', 'PATID', 'PROJID', 'PROTSEG', 'VISNO', 'OTHER_KEY_FIELDS',
-                   'VARIABLE_NAME', 'OLD_VALUE'
-                   ]
+        headers = ['PROTOCOL', 'DATASET', 'SITE', 'PATID', 'PROJID', 'PROTSEG', 'VISNO', 'OTHER_KEY_FIELDS']
+        if other_key_fields not in (None, ""):  # If there are other key fields add their values to the csv
+            for key_field in other_key_fields.split(","):
+                headers.append(key_field)
+        headers += ['VARIABLE_NAME', 'OLD_VALUE']  # Variable name will be the field to be mdced
         csv_writer = csv.DictWriter(mdc_outfile, fieldnames=headers)
         csv_writer.writeheader()
         # Write contents of each file to the main csv file
@@ -260,7 +284,7 @@ def create_single_mdc(mdc_file_folder):
 
 
 def main():
-    # mdc_file_path = create_mdc_from_input()
+    # other_key_fields, mdc_file_path = create_mdc_from_input()
     mdc_file_path = r'G:\NIDADSC\spitts\MDCs\visno_00I\create_mdc.csv'
     mdc_file_dir = os.path.dirname(mdc_file_path)
     created_sas_files = create_sas_files_from_create_mdc_csv(mdc_file_path)
