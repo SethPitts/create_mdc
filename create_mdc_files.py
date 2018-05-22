@@ -116,6 +116,7 @@ def run_mdc(mdc_file):
 def create_single_mdc(mdc_file_folder):
     mdc_files = [item for item in os.listdir(mdc_file_folder)
                  if item.endswith('.csv')
+                 if item.find('create') == -1
                  ]
 
     with open(os.path.join(mdc_file_folder, '{}_mdc.csv'.format(mdc_file_folder.split("\\")[-1])), 'w', newline="") as \
@@ -161,7 +162,7 @@ def create_mdc_from_input():
 
 def main():
     # mdc_file_path = create_mdc_from_input()
-    mdc_file_path = 'mdc.csv'
+    mdc_file_path = 'create_mdc.csv'
     create_mdc_from_file(mdc_file_path)
     # create_single_mdc(r'G:\NIDADSC\spitts\MDCs\visno_00I')
 
@@ -172,7 +173,7 @@ def create_mdc_from_file(mdc_file):
         data_path = r'G:\NIDADSC\NDC\SAS\PROD_SAS_CUP\SAS'
         andata = r'G:\NIDADSC\NDC\SAS\PROD_SAS_CUP\SAS\an'
         pmdata = r'G:\NIDADSC\NDC\SAS\PROD_SAS_CUP\SAS\pm'
-        mdc_path = r'G:\NIDADSC\spitts\MDCs\visno_00I'
+        mdc_folder_path = os.path.dirname(mdc_file)
         for row in csv_reader:
             dataset = row['dataset']
             patids = row['patids'].split(",")
@@ -182,13 +183,13 @@ def create_mdc_from_file(mdc_file):
             key_fields_lenth = ' OTHER_KEY_FIELDS ${}.'.format(len(other_key_fields))
             other_key_fields = other_key_fields.split(",")
             field_to_mdc = row['field_to_mdc']
-            mdc_file_path = 'Create_{}_MDC.sas'.format(dataset)
+            mdc_file_path = os.path.join(mdc_folder_path, 'Create_{}_MDC.sas'.format(dataset))
 
             mdc_info = dict()
             mdc_info['data_path'] = data_path
             mdc_info['an_path'] = andata
             mdc_info['pm_path'] = pmdata
-            mdc_info['mdc_path'] = mdc_path
+            mdc_info['mdc_path'] = mdc_folder_path
             mdc_info['dataset'] = dataset
             mdc_info['patids'] = patids
             mdc_info['protseg'] = protseg
