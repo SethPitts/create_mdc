@@ -121,7 +121,9 @@ def create_single_mdc(mdc_file_folder):
 
     with open(os.path.join(mdc_file_folder, '{}_mdc.csv'.format(mdc_file_folder.split("\\")[-1])), 'w', newline="") as \
             mdc_outfile:
-        headers = ['PROTOCOL', 'DATASET', 'SITE', 'PATID', 'PROJID', 'PROTSEG', 'VISNO', 'VARIABLE_NAME', 'OLD_VALUE']
+        headers = ['PROTOCOL', 'DATASET', 'SITE', 'PATID', 'PROJID', 'PROTSEG', 'VISNO', 'OTHER_KEY_FIELDS',
+                   'VARIABLE_NAME', 'OLD_VALUE'
+                   ]
         csv_writer = csv.DictWriter(mdc_outfile, fieldnames=headers)
         csv_writer.writeheader()
         for mdc_file in mdc_files:
