@@ -74,7 +74,7 @@ data {dataset}_an;
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
 	PROTOCOL = substr(PROT,1,4);
-	OTHER_KEY_FIELDS = "{other_key_fields}
+	OTHER_KEY_FIELDS = "{other_key_fields};
 	keep {keep_string};
 run;
 
@@ -86,7 +86,7 @@ data {dataset}_pm;
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
 	PROTOCOL = substr(PROT,1,4);
-	OTHER_KEY_FIELDS = "{other_key_fields}
+	OTHER_KEY_FIELDS = "{other_key_fields};
 	keep {keep_string};
 run;
 
