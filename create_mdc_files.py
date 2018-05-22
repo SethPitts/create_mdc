@@ -1,6 +1,6 @@
 import csv
-import subprocess
 import os
+import subprocess
 
 
 def create_mdc_sas_file(mdc_info: dict, mdc_file_path: str):
@@ -30,10 +30,12 @@ def create_mdc_sas_file(mdc_info: dict, mdc_file_path: str):
 
     temp_other_key_fields = mdc_info['other_key_fields']
     if temp_other_key_fields != ['']:
-        other_key_fields_template = 'AND {key_field} = "{key_field}"'
+        # other_key_fields_template = 'AND {key_field} = "{key_field}"'
         for key_field in temp_other_key_fields:
-            filter_data.append(other_key_fields_template.format(**{'key_field': key_field}))
+            # will s how all values for other key field and user can remove those not needed
+            # filter_data.append(other_key_fields_template.format(**{'key_field': key_field}))
             keep_data.append(key_field)
+            # TODO: Create a new variable to hold the other key field data in the keep
 
     filter_string = " ".join(filter_data)
     mdc_info['filter_string'] = filter_string
@@ -120,8 +122,45 @@ def create_single_mdc(mdc_file_folder):
                 csv_reader = csv.DictReader(mdc_infile)
                 for row in csv_reader:
                     csv_writer.writerow(row)
+
+
+def create_mdc_from_input():
+    mdc_csv_name = input('What do you want to call the mdc file? ')
+    dir_to_save_mdc_file = input('Where do you want to save the file? ')
+    mdc_file_path = os.path.join(dir_to_save_mdc_file, mdc_csv_name)
+    # TODO: Check for valid input errywhere
+    with open(mdc_file_path, 'w', newline="") as csv_outfile:
+        field_names = ['dataset', 'patids', 'protseg', 'field_to_mdc', 'visno', 'other_key_fields']
+        csv_writer = csv.writer(csv_outfile)
+        csv_writer.writerow(field_names)
+        datasets = input('What data sets to include(comma separated)? ').split(",")
+        patids = input('What patids to include(comma separated)? (Leave empty to search for all patids ')
+        if patids is not '':
+            print("twas not")
+            patids = ",".join(['"{}"'.format(patid)
+                               for patid in patids.split(",")
+                               ])
+            print(patids)
+        protseg = input('What protseg to include?')
+        visno = input('What VISNO to include?')
+        other_key_fields = input('What other key fields to include(comma separated)? (Leave empty if N/A)')
+        field_to_mdc = input('What field to MDC?')
+        for dataset in datasets:
+            row = [dataset, patids, protseg, field_to_mdc, visno, other_key_fields]
+            csv_writer.writerow(row)
+
+        print("Wrote MDC file to {}".format(mdc_file_path))
+    return mdc_file_path
+
+
 def main():
-    with open('mdc.csv', 'r') as csv_infile:
+    mdc_file_path = create_mdc_from_input()
+    create_mdc_from_file(mdc_file_path)
+    # create_single_mdc(r'G:\NIDADSC\spitts\MDCs\visno_00I')
+
+
+def create_mdc_from_file(mdc_file):
+    with open(mdc_file, 'r') as csv_infile:
         csv_reader = csv.DictReader(csv_infile)
         data_path = r'G:\NIDADSC\NDC\SAS\PROD_SAS_CUP\SAS'
         andata = r'G:\NIDADSC\NDC\SAS\PROD_SAS_CUP\SAS\an'
@@ -148,9 +187,7 @@ def main():
             mdc_info['other_key_fields'] = other_key_fields
             mdc_info['field_to_mdc'] = field_to_mdc
 
-            run_mdc(create_mdc_sas_file(mdc_info, mdc_file_path))
-
-    create_single_mdc(r'G:\NIDADSC\spitts\MDCs\visno_00I')
+            return create_mdc_sas_file(mdc_info, mdc_file_path)
 
 
 if __name__ == '__main__':
