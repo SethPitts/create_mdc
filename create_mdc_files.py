@@ -78,8 +78,8 @@ def create_sas_files_from_create_mdc_csv(create_mdc_csv_file):
 
             mdc_info = dict()
             mdc_info['clinical_data_path'] = clinical_data_path
-            mdc_info['an_path'] = an_data_path
-            mdc_info['pm_path'] = pm_data_path
+            mdc_info['an_data_path'] = an_data_path
+            mdc_info['pm_data_path'] = pm_data_path
             mdc_info['mdc_path'] = mdc_folder_path
             mdc_info['dataset'] = dataset
             mdc_info['patids'] = patids
@@ -159,9 +159,9 @@ def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
 /* Get data for mdc from by checking main pm and an tables
 */
 
-LIBNAME ndcdata "{data_path}";
-LIBNAME andata "{an_path}";
-LIBNAME pmdata "{pm_path}";
+LIBNAME ndcdata "{clinical_data_path}";
+LIBNAME andata "{an_data_path}";
+LIBNAME pmdata "{pm_data_path}";
 
 data {dataset};
 	length PROTOCOL $4. DATASET $6.{key_fields_length};
@@ -259,7 +259,7 @@ def create_single_mdc(mdc_file_folder):
 
 def main():
     # mdc_file_path = create_mdc_from_input()
-    mdc_file_path = 'create_mdc.csv'
+    mdc_file_path = r'G:\NIDADSC\spitts\MDCs\visno_00I\create_mdc.csv'
     mdc_file_dir = os.path.dirname(mdc_file_path)
     create_sas_files_from_create_mdc_csv(mdc_file_path)
     create_single_mdc(mdc_file_dir)
