@@ -53,6 +53,7 @@ def create_sas_files_from_create_mdc_csv(create_mdc_csv_file):
     :return: No return
     """
 
+    created_sas_files = []
     # Open the create_mdc.csv file to get the data for the sas file
     with open(create_mdc_csv_file, 'r') as csv_infile:
         create_mdc_csv_reader = csv.DictReader(csv_infile)
@@ -89,7 +90,8 @@ def create_sas_files_from_create_mdc_csv(create_mdc_csv_file):
             mdc_info['key_fields_length'] = key_fields_lenth
             mdc_info['field_to_mdc'] = field_to_mdc
 
-            create_mdc_sas_file(mdc_info, sas_file_path)
+            created_sas_files.append(create_mdc_sas_file(mdc_info, sas_file_path))
+        return created_sas_files
 
 
 def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
@@ -165,7 +167,7 @@ LIBNAME pmdata "{pm_data_path}";
 
 data {dataset};
 	length PROTOCOL $4. DATASET $6.{key_fields_length};
-	set {clinical_data_path}.{dataset};
+	set ndcdata.{dataset};
 	if {filter_string};
 	DATASET = "{dataset}";
 	VARIABLE_NAME = "{field_to_mdc}";
@@ -177,7 +179,7 @@ run;
 
 data {dataset}_an;
 	length PROTOCOL $4. DATASET $6.{key_fields_length};
-	set {an_data_path}.{dataset}_an;
+	set andata.{dataset}_an;
 	if {filter_string};
 	DATASET = "{dataset}_an";
 	VARIABLE_NAME = "{field_to_mdc}";
@@ -189,7 +191,7 @@ run;
 
 data {dataset}_pm;
 	length PROTOCOL $4. DATASET $6.{key_fields_length};
-	set {pm_data_path}.{dataset}_pm;
+	set pmdata.{dataset}_pm;
 	if {filter_string};
 	DATASET = "{dataset}_pm";
 	VARIABLE_NAME = "{field_to_mdc}";
@@ -261,7 +263,9 @@ def main():
     # mdc_file_path = create_mdc_from_input()
     mdc_file_path = r'G:\NIDADSC\spitts\MDCs\visno_00I\create_mdc.csv'
     mdc_file_dir = os.path.dirname(mdc_file_path)
-    create_sas_files_from_create_mdc_csv(mdc_file_path)
+    created_sas_files = create_sas_files_from_create_mdc_csv(mdc_file_path)
+    for sas_file in created_sas_files:
+        run_mdc(sas_file)
     create_single_mdc(mdc_file_dir)
 
 
