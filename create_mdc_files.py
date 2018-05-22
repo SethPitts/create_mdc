@@ -74,7 +74,7 @@ data {dataset}_an;
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
 	PROTOCOL = substr(PROT,1,4);
-	OTHER_KEY_FIELDS = "{other_key_fields};
+	OTHER_KEY_FIELDS = "{other_key_fields}";
 	keep {keep_string};
 run;
 
@@ -86,7 +86,7 @@ data {dataset}_pm;
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
 	PROTOCOL = substr(PROT,1,4);
-	OTHER_KEY_FIELDS = "{other_key_fields};
+	OTHER_KEY_FIELDS = "{other_key_fields}";
 	keep {keep_string};
 run;
 
@@ -182,7 +182,10 @@ def create_mdc_from_file(mdc_file):
             protseg = row['protseg']
             visno = row['visno']
             other_key_fields = row['other_key_fields']
-            key_fields_lenth = ' OTHER_KEY_FIELDS ${}.'.format(len(other_key_fields))
+            other_key_fields_lenth = len(other_key_fields)
+            if other_key_fields_lenth == 0:
+                other_key_fields_lenth = 2  # Account for NA
+            key_fields_lenth = ' OTHER_KEY_FIELDS ${}.'.format(other_key_fields_lenth)
             other_key_fields = other_key_fields.split(",")
             field_to_mdc = row['field_to_mdc']
             mdc_file_path = os.path.join(mdc_folder_path, 'Create_{}_MDC.sas'.format(dataset))
@@ -200,7 +203,7 @@ def create_mdc_from_file(mdc_file):
             mdc_info['key_fields_length'] = key_fields_lenth
             mdc_info['field_to_mdc'] = field_to_mdc
 
-            return create_mdc_sas_file(mdc_info, mdc_file_path)
+            create_mdc_sas_file(mdc_info, mdc_file_path)
 
 
 if __name__ == '__main__':
