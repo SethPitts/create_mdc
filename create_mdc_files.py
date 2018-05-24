@@ -109,7 +109,8 @@ def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
     """
     filter_data = []  # Holds the variables we want to filter on
     # Holds the variables we want to keep
-    keep_data = ['DATASET', 'SITE', 'PROTOCOL', 'PATID', 'PROJID', 'OTHER_KEY_FIELDS', 'VARIABLE_NAME', 'OLD_VALUE']
+    keep_data = ['DATASET', 'STUDY_SITE', 'PROTOCOL', 'Subject ID', 'PROJID',
+                 'OTHER_KEY_FIELDS', 'VARIABLE_NAME', 'OLD_VALUE']
 
     # Main field to MDC. If Updating or Deleting an entire record
     # We don't need to keep the field name in the final keep statement
@@ -161,11 +162,16 @@ def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
     temp_other_key_fields = mdc_info['other_key_fields']
     if temp_other_key_fields != ['']:
         # other_key_fields_template = 'AND {key_field} = "{key_field}"'
+        other_key_field_data = []
         for key_field in temp_other_key_fields:
+            other_key_field_template = 'Other_Key_Field_{key_field} = {key_field};'.format(key_field=key_field)
+            other_key_field_data.append(other_key_field_template)
             keep_data.append(key_field)
-            mdc_info['other_key_fields'] = ','.join(temp_other_key_fields)
+        mdc_info['other_key_fields'] = ','.join(temp_other_key_fields)
+        mdc_info['other_key_fields_string'] = "\n".join(other_key_field_data)
     else:
         mdc_info['other_key_fields'] = "NA"
+        mdc_info['other_key_fields_string'] = ""
         # TODO: Create a new variable to hold the other key field data in the keep
 
     filter_string = " ".join(filter_data)  # Final list of conditions to filter on
@@ -190,9 +196,8 @@ data {dataset};
 	DATASET = "{dataset}";
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
-	RENAME {field_to_mdc} = OLD_VALUE;
 	PROTOCOL = substr(PROT,1,4);
-	OTHER_KEY_FIELDS = "{other_key_fields}";
+	{other_key_fields_string}
 	keep {keep_string};
 run;
 
@@ -203,9 +208,8 @@ data {dataset}_an;
 	DATASET = "{dataset}_an";
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
-	RENAME {field_to_mdc} = OLD_VALUE;
 	PROTOCOL = substr(PROT,1,4);
-	OTHER_KEY_FIELDS = "{other_key_fields}";
+	{other_key_fields_string}
 	keep {keep_string};
 run;
 
@@ -216,9 +220,8 @@ data {dataset}_pm;
 	DATASET = "{dataset}_pm";
 	VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
-	RENAME {field_to_mdc} = OLD_VALUE;
 	PROTOCOL = substr(PROT,1,4);
-	OTHER_KEY_FIELDS = "{other_key_fields}";
+	{other_key_fields_string}
 	keep {keep_string};
 run;
 
@@ -285,12 +288,12 @@ def create_single_mdc(mdc_file_folder, other_key_fields=None):
 
 def main():
     # other_key_fields, mdc_file_path = create_mdc_from_input()
-    mdc_file_path = r'G:\NIDADSC\spitts\MDCs\visno_00I\create_mdc.csv'
+    mdc_file_path = r'C:\Users\emdresearch1\PycharmProjects\create_mdc\test_mdc\create_mdc.csv'
     mdc_file_dir = os.path.dirname(mdc_file_path)
     created_sas_files = create_sas_files_from_create_mdc_csv(mdc_file_path)
-    for sas_file in created_sas_files:
-        run_mdc(sas_file)
-    create_single_mdc(mdc_file_dir)
+    # for sas_file in created_sas_files:
+    #     run_mdc(sas_file)
+    # create_single_mdc(mdc_file_dir)
 
 
 if __name__ == '__main__':
