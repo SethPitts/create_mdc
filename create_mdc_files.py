@@ -67,6 +67,7 @@ def create_sas_files_from_create_mdc_csv(create_mdc_csv_file):
 
         # Get data from create_mdc.csv to create the sas file
         # TODO: Check for valide headers in the csv file
+        final_keep_statement = []
         for row in create_mdc_csv_reader:
             dataset = row['dataset']
             patids = row['patids'].split(",")
@@ -96,8 +97,9 @@ def create_sas_files_from_create_mdc_csv(create_mdc_csv_file):
             mdc_info['key_fields_length'] = key_fields_lenth
             mdc_info['field_to_mdc'] = field_to_mdc
 
-            created_sas_files.append(create_mdc_sas_file(mdc_info, sas_file_path))
-        return created_sas_files
+            sas_file, final_keep_statement = create_mdc_sas_file(mdc_info, sas_file_path)
+            created_sas_files.append(sas_file)
+        return created_sas_files, final_keep_statement
 
 
 def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
@@ -109,16 +111,16 @@ def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
     """
     filter_data = []  # Holds the variables we want to filter on
     # Holds the variables we want to keep
-    keep_data = ['DATASET', 'STUDY_SITE', 'PROTOCOL', 'Subject ID', 'PROJID',
-                 'OTHER_KEY_FIELDS', 'VARIABLE_NAME', 'OLD_VALUE']
+    keep_data = ['DATASET', 'SITE', 'PROTOCOL', 'PATID', 'PROJID', 'MDC_VARIABLE_NAME', 'OLD_VALUE']
 
     # Main field to MDC. If Updating or Deleting an entire record
     # We don't need to keep the field name in the final keep statement
     # If it is not All or DELETE then we will keep the field name in the
     # final keep statement for output.
     field_to_mdc = mdc_info['field_to_mdc'].upper()
-    if field_to_mdc not in ['ALL', 'DELETE']:
-        keep_data.append(field_to_mdc)  # Add to list of variables to keep
+    # Don't need to keep field to mdc as that is captured in MDC Variable name and OLD Value
+    # if field_to_mdc not in ['ALL', 'DELETE']:
+    #     keep_data.append(field_to_mdc)  # Add to list of variables to keep
 
     # PATIIDS to search sas tables for if we are searching for all
     # IDs under a given condintion then leave blank and it will not
@@ -130,7 +132,6 @@ def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
     else:
         patid_string = 'PATID'
         filter_data.append(patid_string)
-
 
     # PROTOCOLs to search sas tables for. If we do not need to search
     # by Protocol this will not be added to the filter conditions
@@ -160,17 +161,20 @@ def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
     # each key field will be kept in the table output
     # will show all values for other key fields and user can remove those not needed
     temp_other_key_fields = mdc_info['other_key_fields']
+    other_key_fields_name = []
     if temp_other_key_fields != ['']:
         # other_key_fields_template = 'AND {key_field} = "{key_field}"'
         other_key_field_data = []
         for key_field in temp_other_key_fields:
-            other_key_field_template = 'Other_Key_Field_{key_field} = {key_field};'.format(key_field=key_field)
-            other_key_field_data.append(other_key_field_template)
-            keep_data.append(key_field)
-        mdc_info['other_key_fields'] = ','.join(temp_other_key_fields)
-        mdc_info['other_key_fields_string'] = "\n".join(other_key_field_data)
+            other_key_field_name = 'Other_Key_Field_{key_field}'.format(key_field=key_field)
+            other_key_field_string = '{key_field_name} = {key_field};'.format(key_field_name=other_key_field_name,
+                                                                              key_field=key_field)
+            other_key_field_data.append(other_key_field_string)
+            keep_data.append(other_key_field_name)
+        # mdc_info['other_key_fields'] = ','.join(temp_other_key_fields)
+        mdc_info['other_key_fields_string'] = "\n\t".join(other_key_field_data)
     else:
-        mdc_info['other_key_fields'] = "NA"
+        # mdc_info['other_key_fields'] = "NA"
         mdc_info['other_key_fields_string'] = ""
         # TODO: Create a new variable to hold the other key field data in the keep
 
@@ -194,7 +198,7 @@ data {dataset};
 	set ndcdata.{dataset};
 	if {filter_string};
 	DATASET = "{dataset}";
-	VARIABLE_NAME = "{field_to_mdc}";
+	MDC_VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
 	PROTOCOL = substr(PROT,1,4);
 	{other_key_fields_string}
@@ -206,7 +210,7 @@ data {dataset}_an;
 	set andata.{dataset}_an;
 	if {filter_string};
 	DATASET = "{dataset}_an";
-	VARIABLE_NAME = "{field_to_mdc}";
+	MDC_VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
 	PROTOCOL = substr(PROT,1,4);
 	{other_key_fields_string}
@@ -218,7 +222,7 @@ data {dataset}_pm;
 	set pmdata.{dataset}_pm;
 	if {filter_string};
 	DATASET = "{dataset}_pm";
-	VARIABLE_NAME = "{field_to_mdc}";
+	MDC_VARIABLE_NAME = "{field_to_mdc}";
 	OLD_VALUE = {field_to_mdc};
 	PROTOCOL = substr(PROT,1,4);
 	{other_key_fields_string}
@@ -241,7 +245,7 @@ proc export data={dataset}_mdc
 run;""".format(**mdc_info)
 
         mdc_outfile.write(template)
-        return sas_file_path
+        return sas_file_path, keep_data
 
 
 def run_mdc(mdc_sas_file):
@@ -253,12 +257,12 @@ def run_mdc(mdc_sas_file):
     subprocess.call([r'S:\SAS 9.4\x86\SASFoundation\9.4\sas.exe', mdc_sas_file])
 
 
-def create_single_mdc(mdc_file_folder, other_key_fields=None):
+def create_single_mdc(mdc_file_folder, keep_statement: list):
     """
     Creates a single csv file out of the multiple csv files created by the program so that
     all data found for each table is in one csv.
     :param mdc_file_folder: folder that contains the csvs
-    :param other_key_fields: other key fields to include
+    :param keep_statement: keep statment used to create the sas data sets will be the headers of the csv
     :return: No return
     """
     # Get the list of files from the folder that are the mdc csvs
@@ -271,11 +275,7 @@ def create_single_mdc(mdc_file_folder, other_key_fields=None):
     with open(os.path.join(mdc_file_folder, '{}_mdc.csv'.format(mdc_file_folder.split("\\")[-1])), 'w', newline="") as \
             mdc_outfile:
         # Headers for the MDC template
-        headers = ['PROTOCOL', 'DATASET', 'SITE', 'PATID', 'PROJID', 'PROTSEG', 'VISNO', 'OTHER_KEY_FIELDS']
-        if other_key_fields not in (None, ""):  # If there are other key fields add their values to the csv
-            for key_field in other_key_fields.split(","):
-                headers.append(key_field)
-        headers += ['VARIABLE_NAME', 'OLD_VALUE']  # Variable name will be the field to be mdced
+        headers = keep_statement
         csv_writer = csv.DictWriter(mdc_outfile, fieldnames=headers)
         csv_writer.writeheader()
         # Write contents of each file to the main csv file
@@ -288,12 +288,12 @@ def create_single_mdc(mdc_file_folder, other_key_fields=None):
 
 def main():
     # other_key_fields, mdc_file_path = create_mdc_from_input()
-    mdc_file_path = r'C:\Users\emdresearch1\PycharmProjects\create_mdc\test_mdc\create_mdc.csv'
+    mdc_file_path = r'G:\NIDADSC\spitts\MDCs\dtx_seq_num\create_mdc.csv'
     mdc_file_dir = os.path.dirname(mdc_file_path)
-    created_sas_files = create_sas_files_from_create_mdc_csv(mdc_file_path)
-    # for sas_file in created_sas_files:
-    #     run_mdc(sas_file)
-    # create_single_mdc(mdc_file_dir)
+    created_sas_files, final_keep_statement = create_sas_files_from_create_mdc_csv(mdc_file_path)
+    for sas_file in created_sas_files:
+        run_mdc(sas_file)
+    create_single_mdc(mdc_file_dir, final_keep_statement)
 
 
 if __name__ == '__main__':
