@@ -127,6 +127,7 @@ def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
     # be added to the filter conditions
     patids = mdc_info['patids']
     if patids != ['']:
+        patids = ['"{}"'.format(patid) for patid in patids]
         patid_string = 'PATID in ({})'.format(",".join(patids))
         filter_data.append(patid_string)  # Add to filter conditions
     else:
@@ -135,10 +136,14 @@ def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
 
     # PROTOCOLs to search sas tables for. If we do not need to search
     # by Protocol this will not be added to the filter conditions
-    # PROT will always be included in the keep statement
+    # PROT will always be included in the keep statement In NDC SAS tables
+    # PROTO ranges from Len 4 to 5 so we will use substr to identify the prot
     protocols = mdc_info['protocols']
+    # TODO: Determine why some numbers are incrementing multiple times
     if protocols != ['']:
-        protocol_string = ' AND PROT in ({})'.format(",".join(protocols))
+        substr_template = 'substr(PROT,1,4) = {}'
+        protocols = [substr_template.format(protocol) for protocol in protocols]
+        protocol_string = ' AND ({})'.format(" OR ".join(protocols))
         filter_data.append(protocol_string)  # Add to filter conditions
 
     # PROTSEG to search by. If the table has no PROTSEG key
