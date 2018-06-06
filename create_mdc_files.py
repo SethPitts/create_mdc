@@ -190,6 +190,58 @@ def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
 
     #  Create the sas file with the data generated from the create_mdc.csv file
     with open(sas_file_path, 'w', newline="") as mdc_outfile:
+        # Check if dataset exist in an and pm folders
+        an_dataset_path = os.path.join(mdc_info['an_data_path'], mdc_info['dataset'] + "_an.sas7bdat")
+        pm_dataset_path = os.path.join(mdc_info['pm_data_path'], mdc_info['dataset'] + "_pm.sas7bdat")
+        if os.path.exists(an_dataset_path):
+            mdc_info['an_dataset_string'] = """
+data {dataset}_an;
+	length PROTOCOL $4. DATASET $6.{key_fields_length};
+	set andata.{dataset}_an;
+	if {filter_string};
+	DATASET = "{dataset}_an";
+	MDC_VARIABLE_NAME = "{field_to_mdc}";
+	OLD_VALUE = put({field_to_mdc},hex4.);
+	PROTOCOL = substr(PROT,1,4);
+	{other_key_fields_string}
+	keep {keep_string};
+run;
+
+proc sort data={dataset}_an; by DATASET SITE PROTOCOL PATID;run;
+
+""".format(**mdc_info)
+
+            mdc_info['an_merge_dataset'] = """{dataset}_an""".format(**mdc_info)
+
+        else:
+            mdc_info['an_dataset_string'] = ""
+            mdc_info['an_merge_dataset'] = ""
+            print(an_dataset_path, "- No AN table for this dataset")
+
+        if os.path.exists(pm_dataset_path):
+            mdc_info['pm_dataset_string'] = """
+data {dataset}_pm;
+	length PROTOCOL $4. DATASET $6.{key_fields_length};
+	set pmdata.{dataset}_pm;
+	if {filter_string};
+	DATASET = "{dataset}_pm";
+	MDC_VARIABLE_NAME = "{field_to_mdc}";
+	OLD_VALUE = put({field_to_mdc},hex4.);
+	PROTOCOL = substr(PROT,1,4);
+	{other_key_fields_string}
+	keep {keep_string};
+run;
+
+proc sort data={dataset}_pm; by DATASET SITE PROTOCOL PATID;run;
+
+""".format(**mdc_info)
+
+            mdc_info['pm_merge_dataset'] = """{dataset}_pm""".format(**mdc_info)
+        else:
+            mdc_info['pm_dataset_string'] = ""
+            print(pm_dataset_path, "- No pm table for this dataset")
+            mdc_info['pm_merge_dataset'] = ""
+
         template = """
 /* Get data for mdc from by checking main pm and an tables
 */
@@ -204,42 +256,20 @@ data {dataset};
 	if {filter_string};
 	DATASET = "{dataset}";
 	MDC_VARIABLE_NAME = "{field_to_mdc}";
-	OLD_VALUE = {field_to_mdc};
+	OLD_VALUE = put({field_to_mdc},hex4.);
 	PROTOCOL = substr(PROT,1,4);
 	{other_key_fields_string}
 	keep {keep_string};
 run;
 
-data {dataset}_an;
-	length PROTOCOL $4. DATASET $6.{key_fields_length};
-	set andata.{dataset}_an;
-	if {filter_string};
-	DATASET = "{dataset}_an";
-	MDC_VARIABLE_NAME = "{field_to_mdc}";
-	OLD_VALUE = {field_to_mdc};
-	PROTOCOL = substr(PROT,1,4);
-	{other_key_fields_string}
-	keep {keep_string};
-run;
+{an_dataset_string}
 
-data {dataset}_pm;
-	length PROTOCOL $4. DATASET $6.{key_fields_length};
-	set pmdata.{dataset}_pm;
-	if {filter_string};
-	DATASET = "{dataset}_pm";
-	MDC_VARIABLE_NAME = "{field_to_mdc}";
-	OLD_VALUE = {field_to_mdc};
-	PROTOCOL = substr(PROT,1,4);
-	{other_key_fields_string}
-	keep {keep_string};
-run;
+{pm_dataset_string}
 
 proc sort data={dataset}; by DATASET SITE PROTOCOL PATID;run;
-proc sort data={dataset}_an; by DATASET SITE PROTOCOL PATID;run;
-proc sort data={dataset}_pm; by DATASET SITE PROTOCOL PATID;run;
 
 data {dataset}_mdc;
-	merge {dataset} {dataset}_an {dataset}_pm;
+	merge {dataset} {an_merge_dataset} {pm_merge_dataset};
 	by DATASET SITE PROTOCOL PATID;
 run;
 
