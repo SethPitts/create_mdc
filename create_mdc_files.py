@@ -196,7 +196,7 @@ def create_mdc_sas_file(mdc_info: dict, sas_file_path: str):
         if os.path.exists(an_dataset_path):
             mdc_info['an_dataset_string'] = """
 data {dataset}_an;
-	length PROTOCOL $4. DATASET $6.{key_fields_length};
+	length PROTOCOL $4. DATASET $10.{key_fields_length};
 	set andata.{dataset}_an;
 	if {filter_string};
 	DATASET = "{dataset}_an";
@@ -221,7 +221,7 @@ proc sort data={dataset}_an; by DATASET SITE PROTOCOL PATID;run;
         if os.path.exists(pm_dataset_path):
             mdc_info['pm_dataset_string'] = """
 data {dataset}_pm;
-	length PROTOCOL $4. DATASET $6.{key_fields_length};
+	length PROTOCOL $4. DATASET $10.{key_fields_length};
 	set pmdata.{dataset}_pm;
 	if {filter_string};
 	DATASET = "{dataset}_pm";
@@ -251,7 +251,7 @@ LIBNAME andata "{an_data_path}";
 LIBNAME pmdata "{pm_data_path}";
 
 data {dataset};
-	length PROTOCOL $4. DATASET $6.{key_fields_length};
+	length PROTOCOL $4. DATASET $10.{key_fields_length};
 	set ndcdata.{dataset};
 	if {filter_string};
 	DATASET = "{dataset}";
@@ -323,7 +323,7 @@ def create_single_mdc(mdc_file_folder, keep_statement: list):
 
 def main():
     # other_key_fields, mdc_file_path = create_mdc_from_input()
-    mdc_file_path = r'G:\NIDADSC\spitts\MDCs\dtx_seq_num\create_mdc.csv'
+    mdc_file_path = r'G:\NIDADSC\spitts\MDCs\roi_form\create_mdc.csv'
     mdc_file_dir = os.path.dirname(mdc_file_path)
     created_sas_files, final_keep_statement = create_sas_files_from_create_mdc_csv(mdc_file_path)
     for sas_file in created_sas_files:
